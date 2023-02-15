@@ -28,33 +28,14 @@ const newsPapers = [
 ]
 
 
-const articles = [];
 
-newsPapers.forEach(newsPapers => {
-    axios.get(newsPapers.address)
-        .then((response) => {
-            const rawData = response.data;
-            const $ = cheerio.load(rawData)
-            
 
-            $('div[class="td_block_inner tdb-block-inner td-fix-index"]', rawData).each(function () {
-                const title = $(this).find('h3').text();
-                const url = $(this).attr('href');
-
-                articles.push({
-                    title,
-                    url,
-                    source : newsPapers.paper
-                })
-            })
-        })
-})
 
 
 const exp = express();
 
 exp.get('/', (req, res) => {
-    res.json('welcome to the pakistan news api')
+    res.send('welcome to the pakistan news api')
 })
 
 
@@ -62,20 +43,48 @@ exp.get('/', (req, res) => {
 
 
 exp.get('/pakistan', (req, res) => {
-//     axios.get('https://arynews.tv/?s=climate')
-//         .then((response) =>{
-//             const rawData = response.data;
-//             const $ = cheerio.load(rawData);
-//             $('a:contains("climate")', rawData).each(function () {
-//                const title = $(this).text()
-//                const url = $(this).attr('href')
-//                articles.push({
-//                 title,
-//                 url,
-//                })               
-//             })
-            res.json(articles)
-        })
+    const articles = [];
+
+    newsPapers.forEach(newsPapers => {
+        axios.get(newsPapers.address)
+            .then((response) => {
+                const rawData = response.data;
+                const $ = cheerio.load(rawData)
+
+
+                $('div[class="td-module-meta-info"]', rawData).each(function () {
+                    console.log("ok");
+                    
+                    const title = $(this).find('h3').text();
+                    const url = $(this).find('a').attr('href');
+
+                    articles.push({
+                        title,
+                        url,
+                        source: newsPapers.paper
+                    })
+                })
+                return res.json(articles);
+            })
+    })
+
+
+    // axios.get('https://arynews.tv/?s=climate')
+    //     .then((response) => {
+    //         const rawData = response.data;
+    //         const $ = cheerio.load(rawData);
+
+    //         $('a:contains("climate")', rawData).each(function () {
+    //             const title = $(this).text()
+    //             const url = $(this).attr('href')
+    //             articles.push({
+    //                 title,
+    //                 url,
+    //             })
+    //         })
+    //         return res.json(articles)
+    //     })
+})
 
 exp.listen(PORT, () => console.log(`Server is listening on port ${PORT}`))
 
