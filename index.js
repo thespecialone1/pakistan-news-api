@@ -1,50 +1,43 @@
 const express = require('express');
-const cheerio = require('cheerio');
 const axios = require('axios');
-const { response } = require('express');
+const cheerio = require('cheerio');
 
-const PORT = 8000;
+const app = express();
+const port = 8000;
 
-const newsPapers = [
-    {
-        paper: 'ARY News',
-        address: 'https://arynews.tv/category/pakistan/'
-    }
-]
+const url = 'https://arynews.tv/category/pakistan/';
 
-const exp = express();
+app.get('/', async (req, res) => {
+  try {
+    const response = await axios.get(url);
+    const $ = cheerio.load(response.data);
 
-exp.get('/', (req, res) => {
-    res.send('welcome to the pakistan news api')
-})
-
-
-exp.get('/pakistan', (req, res) => {
     const articles = [];
 
-    newsPapers.forEach(newsPapers => {
-        axios.get(newsPapers.address)
-            .then((response) => {
-                const rawData = response.data;
-                const $ = cheerio.load(rawData)
+    $('.td-module-container').each((index, element) => {
+      const title = $(element).find('.td-module-meta-info h3').text().trim();
+      const thumbnail = $(element).find('.entry-thumb').attr('data-img-url');
+      const source = $(element).find('.td-module-meta-info h3 a').attr('href');
+      const article = { title, thumbnail, source, description: '' };
+      articles.push(article);
+    });
 
+    // Visit each article source to get the description
+    for (const article of articles) {
+      const sourceResponse = await axios.get(article.source);
+      const $source = cheerio.load(sourceResponse.data);
+      const description = $source('.tdb-block-inner p strong').text().trim();
+      article.description = description;
+    }
 
-                $('div[class="td-module-meta-info"]', rawData).each(function () {
-                    // console.log("ok");
-                    
-                    const title = $(this).find('h3').text();
-                    const url = $(this).find('a').attr('href');
+    // Send articles as a JSON response
+    res.json(articles);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Something went wrong');
+  }
+});
 
-                    articles.push({
-                        title,
-                        url,
-                        source: newsPapers.paper
-                    })
-                })
-                return res.json(articles);
-            })
-    })
-
-})
-
-exp.listen(PORT, () => console.log(`Server is listening on port ${PORT}`))
+app.listen(port, () => {
+  console.log(`App listening at http://localhost:${port}`);
+});
